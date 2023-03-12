@@ -28,7 +28,10 @@ In terms of causality, this information is sampled on rates having lower timesta
 In test, I will combine them in multiple way.
 
 """
-
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("num_samples", default=4000, help="The sample size", type=int)
+args = parser.parse_args()
 import os
 
 os.chdir('./cache/')
@@ -688,13 +691,20 @@ def combine_prompt(rating):
 
 
 total_samples = len(unified_dataset['movielens-1m-ratings'])
-_SAMPLE_SIZE = 10000
+_SAMPLE_SIZE = args.num_samples
+import math
+num_proc = None
+
+if _SAMPLE_SIZE>1000:
+    print(f'num processes = {math.ceil(_SAMPLE_SIZE/1000)}')
+    num_proc = math.ceil(_SAMPLE_SIZE/1000)
+
 sample_idxs = sample(list(range(total_samples)), _SAMPLE_SIZE, )
 
 if not os.path.isdir(f'sampled_prompt_movilens_dataset.hf'):
-    shard = unified_dataset['movielens-1m-ratings'].select(sample_idxs, keep_in_memory=True)
+    shard = unified_dataset['movielens-1m-ratings'].select(sample_idxs)
     sampled_prompt_movilens_dataset = shard.map(combine_prompt,
-                                                num_proc=10,
+                                                num_proc=num_proc,
                                                 cache_file_name='sampled_prompt_movilens_dataset.cache')
     sampled_prompt_movilens_dataset.save_to_disk(f'sampled_prompt_movilens_dataset.hf')
 else:
