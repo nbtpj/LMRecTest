@@ -1,0 +1,8 @@
+datasets
+transformers
+tqdm
+numpy
+geopy
+Babel
+tensorflow-datasets
+tensorflow
