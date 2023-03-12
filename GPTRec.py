@@ -56,6 +56,7 @@ def predict_a_sample(context: str, available_selections: list,
             shift_labels = labels[..., 1:].contiguous()
             # Flatten the tokens
             loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+            loss = loss.reshape(labels.shape[0], -1).sum(dim=-1)
             log_p.extend(loss.reshape(-1).cpu().detach())
         log_p = np.array(log_p)
 
