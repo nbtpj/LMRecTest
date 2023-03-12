@@ -49,7 +49,7 @@ def predict_a_sample(context: str, available_selections: list,
             batched_input_ids = inputs['input_ids'][i:i + DEEP_MODEL_BATCH_SIZE, ...].to(model.device)
             batched_attention_mask = inputs['attention_mask'][i:i + DEEP_MODEL_BATCH_SIZE, ...].to(model.device)
             labels = label[i:i + DEEP_MODEL_BATCH_SIZE, ...].to(model.device)
-            lm_logits = model(inut_ids=batched_input_ids, attention_mask=batched_attention_mask).logits
+            lm_logits = model(inout_ids=batched_input_ids, attention_mask=batched_attention_mask).logits
 
             # Shift so that tokens < n predict n
             shift_logits = lm_logits[..., :-1, :].contiguous()
