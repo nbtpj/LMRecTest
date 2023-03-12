@@ -34,7 +34,7 @@ def predict_a_sample(context: str, available_selections: list,
             label.append(mask_all_except(list(ids), term_to_estimate, -100))
     else:
         ## mask the whole context (estimate all selections)
-        terms_to_estimate = tokenizer(term_to_estimate, add_special_tokens=False)['input_ids']
+        terms_to_estimate = tokenizer(available_selections, add_special_tokens=False)['input_ids']
         for ids, term_to_estimate in zip(inputs['input_ids'], terms_to_estimate):
             label.append(mask_all_except(list(ids), term_to_estimate, -100))
 
