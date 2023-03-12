@@ -309,7 +309,8 @@ def history_prompt(rating: dict) -> dict:
     t.reverse()
     if len(previous_ratings) == 0:
         return {
-            'history prompt': ''
+            'history prompt': '',
+            'history overview prompt': ''
         }
     r = 'In terms of most recent movies, ' + ' '.join([describe_a_rating(rate, rating['timestamp']) for rate in t[:10]])
     his = ''
