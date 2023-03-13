@@ -26,7 +26,6 @@ def pre_embed_for_decoder(list_txt: list, model: BartForConditionalGeneration,
     token_encode = model.get_input_embeddings()
     if model_paralell:
         token_encode = torch.nn.DataParallel(token_encode)
-    term_to_estimate = tokenizer(term_to_estimate, add_special_tokens=False)['input_ids']
     labels = tokenizer(list_txt, truncation=True, padding=True, return_tensors='pt')
     outputs = []
     for i in range(0, len(list_txt), DEEP_MODEL_BATCH_SIZE):
@@ -36,6 +35,7 @@ def pre_embed_for_decoder(list_txt: list, model: BartForConditionalGeneration,
             outputs.append(token_encode(batched_inputs.to(model.device)))
     label = []
     if term_to_estimate is not None:
+        term_to_estimate = tokenizer(term_to_estimate, add_special_tokens=False)['input_ids']
         for ids in labels['input_ids']:
             label.append(mask_all_except(list(ids), term_to_estimate, -100))
     else:
