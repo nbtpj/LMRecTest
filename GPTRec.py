@@ -46,7 +46,7 @@ def predict_a_sample(context: str, available_selections: list,
         ## that is why I sort without chaning the increasing direction
         loss_fct = CrossEntropyLoss(reduction='none')
         log_p = []
-        for i in range(0, len(available_selections), batch_size):
+        for i in tqdm(range(0, len(available_selections), batch_size)):
             batched_input_ids = inputs['input_ids'][i:i + batch_size, ...].to(model.device)
             batched_attention_mask = inputs['attention_mask'][i:i + batch_size, ...].to(model.device)
             labels = label[i:i + batch_size, ...].to(model.device)
