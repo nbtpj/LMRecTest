@@ -58,7 +58,7 @@ def encode(list_txt: list, model: BartForConditionalGeneration, tokenizer: BartT
     for i in range(0, len(list_txt), batch_size):
         inputs = tokenizer(list_txt[i:i + batch_size], truncation=True, padding=True, return_tensors='pt')
         with torch.no_grad():
-            inputs = {k: v.to(encoder.device) for k, v in inputs.items()}
+            inputs = {k: v.to(device) for k, v in inputs.items()}
             outputs = encoder(**inputs).last_hidden_state
             for x, mask in zip(outputs, inputs['attention_mask'] > 0):
                 yield x[mask > 0, ...]
@@ -77,7 +77,7 @@ def predict_log_prob(context, decoder_inputs_embeds, decoder_attention_mask, lab
             batched_labels = labels[i:i + batch_size, ...]
             batched_decoder_inputs_embeds = decoder_inputs_embeds[i:i + batch_size, ...]
             batched_decoder_attention_mask = decoder_attention_mask[i:i + batch_size, ...]
-            encoder_last_hidden = context.expand((batched_decoder_inputs_embeds.shape[0], -1, -1)).to(model.device)
+            encoder_last_hidden = context.expand((batched_decoder_inputs_embeds.shape[0], -1, -1)).to(device)
             decoder_output = decoder(
                 attention_mask=batched_decoder_attention_mask,
                 encoder_hidden_states=encoder_last_hidden,
