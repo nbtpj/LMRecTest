@@ -712,3 +712,5 @@ else:
     from datasets import load_from_disk
 
     sampled_prompt_movilens_dataset = load_from_disk('sampled_prompt_movilens_dataset.hf')
+    if len(sampled_prompt_movilens_dataset)<_SAMPLE_SIZE:
+        print(f"Warning: cached {len(sampled_prompt_movilens_dataset)} samples found! Reusing these samples.")

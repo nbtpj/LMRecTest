@@ -24,6 +24,7 @@ def mask_all_except(seq2mask: list, exception: list, mask_by: int = -100):
 
 def predict_a_sample(context: str, available_selections: list,
                      model: GPT2LMHeadModel, tokenizer: GPT2Tokenizer,
+                     batch_size:int, 
                      term_to_estimate: str = TERM_TO_ESTIMATE):
     context_w_selection = [context + selection for selection in available_selections]
     inputs = tokenizer(context_w_selection, truncation=True, padding=True, return_tensors='pt')
@@ -45,10 +46,10 @@ def predict_a_sample(context: str, available_selections: list,
         ## that is why I sort without chaning the increasing direction
         loss_fct = CrossEntropyLoss(reduction='none')
         log_p = []
-        for i in range(0, len(available_selections), DEEP_MODEL_BATCH_SIZE):
-            batched_input_ids = inputs['input_ids'][i:i + DEEP_MODEL_BATCH_SIZE, ...].to(model.device)
-            batched_attention_mask = inputs['attention_mask'][i:i + DEEP_MODEL_BATCH_SIZE, ...].to(model.device)
-            labels = label[i:i + DEEP_MODEL_BATCH_SIZE, ...].to(model.device)
+        for i in range(0, len(available_selections), batch_size):
+            batched_input_ids = inputs['input_ids'][i:i + batch_size, ...].to(model.device)
+            batched_attention_mask = inputs['attention_mask'][i:i + batch_size, ...].to(model.device)
+            labels = label[i:i + batch_size, ...].to(model.device)
             lm_logits = model(input_ids=batched_input_ids, attention_mask=batched_attention_mask).logits
 
             # Shift so that tokens < n predict n
@@ -65,7 +66,8 @@ def predict_a_sample(context: str, available_selections: list,
 
 def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
                                 contexts:list, available_selections:list,
-                                term_to_estimate: str = TERM_TO_ESTIMATE):
+                                term_to_estimate: str = TERM_TO_ESTIMATE,
+                                batch_size:int=DEEP_MODEL_BATCH_SIZE):
     """
     Return the right ranked index of available_selections w.r.t corresponding context
     i.e:
@@ -85,7 +87,9 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
     predictions = []
     all_selections = np.arange(len(available_selections))
     for context in tqdm(contexts):
-        log_p = predict_a_sample(context, available_selections, model, tokenizer, term_to_estimate,)
+        log_p = predict_a_sample(context, available_selections, model, tokenizer, 
+                                 term_to_estimate=term_to_estimate,
+                                 batch_size=batch_size)
         right_position_in_rank = np.argsort(log_p)
         predictions.append([all_selections[right_position_in_rank]])
     predictions = np.concatenate(predictions, axis=0)
