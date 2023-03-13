@@ -22,15 +22,17 @@ def mask_all_except(seq2mask: list, exception: list, mask_by: int = -100):
 
 
 def pre_embed_for_decoder(list_txt: list, model: BartForConditionalGeneration,
-                          tokenizer: BartTokenizer, term_to_estimate: str = TERM_TO_ESTIMATE):
+                          tokenizer: BartTokenizer, 
+                          term_to_estimate: str = TERM_TO_ESTIMATE,
+                          batch_size: int = DEEP_MODEL_BATCH_SIZE):
     token_encode = model.get_input_embeddings()
     if model_paralell:
         token_encode = torch.nn.DataParallel(token_encode)
     labels = tokenizer(list_txt, truncation=True, padding=True, return_tensors='pt')
     outputs = []
-    for i in range(0, len(list_txt), DEEP_MODEL_BATCH_SIZE):
+    for i in range(0, len(list_txt), batch_size):
         batched_inputs = model.prepare_decoder_input_ids_from_labels(
-            labels['input_ids'][i:i + DEEP_MODEL_BATCH_SIZE, ...])
+            labels['input_ids'][i:i + batch_size, ...])
         with torch.no_grad():
             outputs.append(token_encode(batched_inputs.to(model.device)))
     label = []
