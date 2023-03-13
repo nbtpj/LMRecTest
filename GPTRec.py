@@ -20,37 +20,32 @@ def mask_all_except(seq2mask: list, exception: list, mask_by: int = -100):
             start_idx += 1
     return seq2mask
 
+def pad_label(batch, pad_id=-100):
+    max_length = max(*[len(each) for each in batch])
+    paded = []
+    for each in batch:
+        paded.append(each + [pad_id,]*(max_length - len(each)))
+    return paded
 
+def predict_a_sample(token_list: list,
+                     label:list,
+                     model: GPT2LMHeadModel, 
+                     tokenizer: GPT2Tokenizer,
+                     batch_size:int):
 
-def predict_a_sample(context: str, available_selections: list,
-                     model: GPT2LMHeadModel, tokenizer: GPT2Tokenizer,
-                     batch_size:int, 
-                     term_to_estimate: str = TERM_TO_ESTIMATE):
-    context_w_selection = [context + selection for selection in available_selections]
-    inputs = tokenizer(context_w_selection, truncation=True, padding=True, return_tensors='pt')
-    label = []
-    if term_to_estimate is not None:
-        term_to_estimate = tokenizer(term_to_estimate, add_special_tokens=False)['input_ids']
-        for ids in inputs['input_ids']:
-            label.append(mask_all_except(list(ids), term_to_estimate, -100))
-    else:
-        ## mask the whole context (estimate all selections)
-        selection = tokenizer(available_selections, add_special_tokens=False)['input_ids']
-        for ids, term_to_estimate in zip(inputs['input_ids'], selection):
-            label.append(mask_all_except(list(ids), term_to_estimate, -100))
-
-    label = torch.LongTensor(label)
-    label = torch.where(label == tokenizer.pad_token_id, -100, label)
     with torch.no_grad():
         ## cross entropy is equivalent with negative log likelihood , in which lower means better
         ## that is why I sort without chaning the increasing direction
         loss_fct = CrossEntropyLoss(reduction='none')
         log_p = []
-        for i in tqdm(range(0, len(available_selections), batch_size)):
-            batched_input_ids = inputs['input_ids'][i:i + batch_size, ...].to(model.device)
-            batched_attention_mask = inputs['attention_mask'][i:i + batch_size, ...].to(model.device)
-            labels = label[i:i + batch_size, ...].to(model.device)
-            lm_logits = model(input_ids=batched_input_ids, attention_mask=batched_attention_mask).logits
+        for i in range(0, len(token_list), batch_size):
+            batched_inputs = tokenizer.pad({'input_ids': token_list[i:i + batch_size]}, 
+                                           return_attention_mask=True, 
+                                           return_tensors='pt')
+            batched_inputs = {k:v.to(device) for k, v in batched_inputs.items()}
+            labels = label[i:i + batch_size]
+            labels = torch.LongTensor(pad_label(labels)).to(device)
+            lm_logits = model(**batched_inputs).logits
 
             # Shift so that tokens < n predict n
             shift_logits = lm_logits[..., :-1, :].contiguous()
@@ -62,7 +57,6 @@ def predict_a_sample(context: str, available_selections: list,
         log_p = np.array(log_p)
 
     return log_p
-
 
 def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
                                 contexts:list, available_selections:list,
@@ -84,12 +78,31 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
         if is None, the model will estimate the whole selection.
     :return: a numpy array of ranked index in shape of [num_contexts , num_selections]
     """
+    print('tokenizing inputs')
+    context_ids = tokenizer(contexts, return_tensors=None, verbose=True)['input_ids']
+    selection_ids = tokenizer(available_selections, return_tensors=None, verbose=True)['input_ids']
+    label = selection_ids
+    if term_to_estimate is not None:
+        label = []
+        term_to_estimate = tokenizer(term_to_estimate, add_special_tokens=False)['input_ids']
+        for ids in selection_ids:
+            label.append(mask_all_except(list(ids), term_to_estimate, -100))
+    max_label_length = max(*[len(s) for s in label])
+    assert max_label_length < tokenizer.model_max_length, "target length is too large!"
     predictions = []
     all_selections = np.arange(len(available_selections))
-    for context in tqdm(contexts):
-        log_p = predict_a_sample(context, available_selections, model, tokenizer, 
-                                 term_to_estimate=term_to_estimate,
-                                 batch_size=batch_size)
+
+    if model_paralell:
+        model = torch.nn.DataParallel(model)
+    for context in tqdm(context_ids):
+        truncated_ids = context[:tokenizer.model_max_length - max_label_length - 1]
+        context_w_selections_ids = [truncated_ids +  selection for selection in selection_ids]
+        label = [[-100,]*len(truncated_ids) +  selection for selection in label]
+        log_p = predict_a_sample(token_list=context_w_selections_ids,
+                                    label=label,
+                                    model=model,
+                                    tokenizer=tokenizer,
+                                    batch_size=batch_size)
         right_position_in_rank = np.argsort(log_p)
         predictions.append([all_selections[right_position_in_rank]])
     predictions = np.concatenate(predictions, axis=0)
