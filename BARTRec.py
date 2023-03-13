@@ -23,10 +23,11 @@ def mask_all_except(seq2mask: list, exception: list, mask_by: int = -100):
 
 def pre_embed_for_decoder(list_txt: list, model: BartForConditionalGeneration,
                           tokenizer: BartTokenizer, 
+                          disable_paralell:bool,
                           term_to_estimate: str = TERM_TO_ESTIMATE,
                           batch_size: int = DEEP_MODEL_BATCH_SIZE):
     token_encode = model.get_input_embeddings()
-    if model_paralell:
+    if model_paralell and not disable_paralell:
         token_encode = torch.nn.DataParallel(token_encode)
     labels = tokenizer(list_txt, truncation=True, padding=True, return_tensors='pt')
     outputs = []
@@ -53,9 +54,11 @@ def pre_embed_for_decoder(list_txt: list, model: BartForConditionalGeneration,
     }
 
 
-def encode(list_txt: list, model: BartForConditionalGeneration, tokenizer: BartTokenizer, batch_size:int):
+def encode(list_txt: list, model: BartForConditionalGeneration, 
+           tokenizer: BartTokenizer, batch_size:int,
+           disable_paralell:bool):
     encoder = model.get_encoder()
-    if model_paralell:
+    if model_paralell and not disable_paralell:
         encoder = torch.nn.DataParallel(encoder)
     for i in range(0, len(list_txt), batch_size):
         inputs = tokenizer(list_txt[i:i + batch_size], truncation=True, padding=True, return_tensors='pt')
@@ -66,14 +69,15 @@ def encode(list_txt: list, model: BartForConditionalGeneration, tokenizer: BartT
                 yield x[mask > 0, ...]
 
 
-def predict_log_prob(context, decoder_inputs_embeds, decoder_attention_mask, labels, model, batch_size:int):
+def predict_log_prob(context, decoder_inputs_embeds, 
+                     decoder_attention_mask, labels, model, batch_size:int, disable_paralell:bool):
     with torch.no_grad():
         ## cross entropy is equivalent with negative log likelihood , in which lower means better
         ## that is why I sort without chaning the increasing direction
         loss_fct = CrossEntropyLoss(reduction='none')
         log_p = []
         decoder = model.get_decoder()
-        if model_paralell:
+        if model_paralell and not disable_paralell:
             decoder = torch.nn.DataParallel(decoder)
         for i in range(0, decoder_inputs_embeds.shape[0], batch_size):
             batched_labels = labels[i:i + batch_size, ...]
@@ -104,7 +108,8 @@ def rank_with_bart(model: BartForConditionalGeneration, tokenizer: BartTokenizer
                    decoder_embeddings: dict = None,
                    context_embedding: list = None,
                    term_to_estimate: str = TERM_TO_ESTIMATE,
-                   batch_size:int=DEEP_MODEL_BATCH_SIZE):
+                   batch_size:int=DEEP_MODEL_BATCH_SIZE,
+                   disable_paralell:bool=False):
     """
     Return the right ranked index of available_selections w.r.t corresponding context
     i.e:
@@ -126,15 +131,21 @@ def rank_with_bart(model: BartForConditionalGeneration, tokenizer: BartTokenizer
     all_selections = np.arange(len(available_selections))
     if decoder_embeddings is None:
         decoder_embeddings = pre_embed_for_decoder(available_selections, model, tokenizer,
-                                                   term_to_estimate=term_to_estimate, batch_size=batch_size)
+                                                   term_to_estimate=term_to_estimate, 
+                                                   batch_size=batch_size,
+                                                   disable_paralell=disable_paralell)
         decoder_embeddings = {k: v.to(model.device) for k, v in decoder_embeddings.items()}
         if 'decoder_input_ids' in decoder_embeddings:
             del decoder_embeddings['decoder_input_ids']
     predictions = []
     if context_embedding is None:
-        context_embedding = encode(contexts, model, tokenizer, batch_size=batch_size)
+        context_embedding = encode(contexts, model, tokenizer, 
+                                   batch_size=batch_size, 
+                                   disable_paralell=disable_paralell)
     for ctx_embedding in tqdm(context_embedding):
-        log_p = predict_log_prob(ctx_embedding, **decoder_embeddings, model=model, batch_size=batch_size)
+        log_p = predict_log_prob(ctx_embedding, **decoder_embeddings, 
+                                 model=model, batch_size=batch_size,
+                                 disable_paralell=disable_paralell)
         right_position_in_rank = np.argsort(log_p)
         predictions.append([all_selections[right_position_in_rank]])
     predictions = np.concatenate(predictions, axis=0)
