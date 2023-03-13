@@ -38,7 +38,7 @@ def predict_a_sample(token_list: list,
         ## that is why I sort without chaning the increasing direction
         loss_fct = CrossEntropyLoss(reduction='none')
         log_p = []
-        for i in tqdm(range(0, len(token_list), batch_size)):
+        for i in range(0, len(token_list), batch_size):
             batched_inputs = tokenizer.pad({'input_ids': token_list[i:i + batch_size]}, 
                                            return_attention_mask=True, 
                                            return_tensors='pt')
