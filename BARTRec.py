@@ -124,7 +124,7 @@ def rank_with_bart(model: BartForConditionalGeneration, tokenizer: BartTokenizer
     all_selections = np.arange(len(available_selections))
     if decoder_embeddings is None:
         decoder_embeddings = pre_embed_for_decoder(available_selections, model, tokenizer,
-                                                   term_to_estimate=term_to_estimate)
+                                                   term_to_estimate=term_to_estimate, batch_size=batch_size)
         decoder_embeddings = {k: v.to(model.device) for k, v in decoder_embeddings.items()}
         if 'decoder_input_ids' in decoder_embeddings:
             del decoder_embeddings['decoder_input_ids']
