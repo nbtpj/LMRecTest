@@ -38,13 +38,14 @@ def predict_a_sample(token_list: list,
         ## that is why I sort without chaning the increasing direction
         loss_fct = CrossEntropyLoss(reduction='none')
         log_p = []
-        for i in range(0, len(token_list), batch_size):
+        for i in tqdm(range(0, len(token_list), batch_size)):
             batched_inputs = tokenizer.pad({'input_ids': token_list[i:i + batch_size]}, 
                                            return_attention_mask=True, 
                                            return_tensors='pt')
             batched_inputs = {k:v.to(device) for k, v in batched_inputs.items()}
             labels = label[i:i + batch_size]
             labels = torch.LongTensor(pad_label(labels)).to(device)
+            assert labels.size(-1)== batched_inputs['input_ids'].size(-1), 'incomparatible label size'
             lm_logits = model(**batched_inputs).logits
 
             # Shift so that tokens < n predict n
@@ -86,7 +87,7 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
         label = []
         term_to_estimate = tokenizer(term_to_estimate, add_special_tokens=False)['input_ids']
         for ids in selection_ids:
-            label.append(mask_all_except(list(ids), term_to_estimate, -100))
+            label.append(mask_all_except(ids, term_to_estimate, -100))
     max_label_length = max(*[len(s) for s in label])
     assert max_label_length < tokenizer.model_max_length, "target length is too large!"
     predictions = []
