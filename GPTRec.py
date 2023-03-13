@@ -82,13 +82,13 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
     print('tokenizing inputs')
     context_ids = tokenizer(contexts, return_tensors=None, verbose=True)['input_ids']
     selection_ids = tokenizer(available_selections, return_tensors=None, verbose=True)['input_ids']
-    label = selection_ids
+    labels = selection_ids
     if term_to_estimate is not None:
-        label = []
+        labels = []
         term_to_estimate = tokenizer(term_to_estimate, add_special_tokens=False)['input_ids']
         for ids in selection_ids:
             label.append(mask_all_except(ids, term_to_estimate, -100))
-    max_label_length = max(*[len(s) for s in label])
+    max_label_length = max(*[len(s) for s in labels])
     assert max_label_length < tokenizer.model_max_length, "target length is too large!"
     predictions = []
     all_selections = np.arange(len(available_selections))
@@ -98,7 +98,7 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
     for context in tqdm(context_ids):
         truncated_ids = context[:tokenizer.model_max_length - max_label_length - 1]
         context_w_selections_ids = [truncated_ids +  selection for selection in selection_ids]
-        label = [[-100,]*len(truncated_ids) +  selection for selection in label]
+        label = [[-100,]*len(truncated_ids) +  selection for selection in labels]
         log_p = predict_a_sample(token_list=context_w_selections_ids,
                                     label=label,
                                     model=model,
