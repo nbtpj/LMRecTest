@@ -78,10 +78,7 @@ movielen_feat_map = {
 
 
 import torch 
-device = torch.cuda.is_available()
-if device:
-    device = 'cuda:0'
-else:
-    device = 'cpu'
 
-device
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
+model_paralell = device == 'cuda:0' and torch.cuda.device_count() > 1
