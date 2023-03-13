@@ -24,6 +24,8 @@ def mask_all_except(seq2mask: list, exception: list, mask_by: int = -100):
 def pre_embed_for_decoder(list_txt: list, model: BartForConditionalGeneration,
                           tokenizer: BartTokenizer, term_to_estimate: str = TERM_TO_ESTIMATE):
     token_encode = model.get_input_embeddings()
+    if model_paralell:
+        token_encode = torch.nn.DataParallel(token_encode)
     term_to_estimate = tokenizer(term_to_estimate, add_special_tokens=False)['input_ids']
     labels = tokenizer(list_txt, truncation=True, padding=True, return_tensors='pt')
     outputs = []
@@ -51,6 +53,8 @@ def pre_embed_for_decoder(list_txt: list, model: BartForConditionalGeneration,
 
 def encode(list_txt: list, model: BartForConditionalGeneration, tokenizer: BartTokenizer, batch_size:int):
     encoder = model.get_encoder()
+    if model_paralell:
+        encoder = torch.nn.DataParallel(encoder)
     for i in range(0, len(list_txt), batch_size):
         inputs = tokenizer(list_txt[i:i + batch_size], truncation=True, padding=True, return_tensors='pt')
         with torch.no_grad():
@@ -67,6 +71,8 @@ def predict_log_prob(context, decoder_inputs_embeds, decoder_attention_mask, lab
         loss_fct = CrossEntropyLoss(reduction='none')
         log_p = []
         decoder = model.get_decoder()
+        if model_paralell:
+            decoder = torch.nn.DataParallel(decoder)
         for i in range(0, decoder_inputs_embeds.shape[0], batch_size):
             batched_labels = labels[i:i + batch_size, ...]
             batched_decoder_inputs_embeds = decoder_inputs_embeds[i:i + batch_size, ...]
