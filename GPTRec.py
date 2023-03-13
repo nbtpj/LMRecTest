@@ -91,7 +91,7 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
     assert max_label_length < tokenizer.model_max_length, "target length is too large!"
     predictions = []
     all_selections = np.arange(len(available_selections))
-
+    print('prepared inputs')
     if model_paralell:
         model = torch.nn.DataParallel(model)
     for context in tqdm(context_ids):
