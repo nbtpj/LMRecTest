@@ -1,4 +1,4 @@
-datasets
+datasets~=2.9.0
 transformers
 tqdm
 numpy
