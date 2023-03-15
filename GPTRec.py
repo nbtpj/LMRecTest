@@ -81,6 +81,7 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
         if is None, the model will estimate the whole selection.
     :return: a numpy array of ranked index in shape of [num_contexts , num_selections]
     """
+    batch_size = min(batch_size, len(contexts), len(available_selections))
     if isinstance(verbose, str) and verbose == 'detail':
         print('tokenizing inputs')
     context_ids = tokenizer(contexts, return_tensors=None, verbose=True)['input_ids']

@@ -129,6 +129,8 @@ def rank_with_bart(model: BartForConditionalGeneration, tokenizer: BartTokenizer
         if is None, the model will estimate the whole selection.
     :return: a numpy array of ranked index in shape of [num_contexts , num_selections]
     """
+    batch_size = min(batch_size, len(contexts), len(available_selections))
+
     all_selections = np.arange(len(available_selections))
     if decoder_embeddings is None:
         decoder_embeddings = pre_embed_for_decoder(available_selections, model, tokenizer,
