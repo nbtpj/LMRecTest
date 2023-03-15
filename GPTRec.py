@@ -81,7 +81,7 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
         if is None, the model will estimate the whole selection.
     :return: a numpy array of ranked index in shape of [num_contexts , num_selections]
     """
-    if verbose == 'detail':
+    if isinstance(verbose, str) and verbose == 'detail':
         print('tokenizing inputs')
     context_ids = tokenizer(contexts, return_tensors=None, verbose=True)['input_ids']
     selection_ids = tokenizer(available_selections, return_tensors=None, verbose=True)['input_ids']
@@ -95,11 +95,11 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
     assert max_label_length < tokenizer.model_max_length, "target length is too large!"
     predictions = []
     all_selections = np.arange(len(available_selections))
-    if verbose == 'detail':
+    if isinstance(verbose, str) and  verbose == 'detail':
         print('prepared inputs')
     if model_paralell and not disable_paralell:
         model = torch.nn.DataParallel(model)
-    if verbose == 'detail':
+    if isinstance(verbose, str) and  verbose == 'detail':
         process = tqdm(context_ids)
     else:
         process = context_ids

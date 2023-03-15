@@ -143,7 +143,7 @@ def rank_with_bart(model: BartForConditionalGeneration, tokenizer: BartTokenizer
         context_embedding = encode(contexts, model, tokenizer, 
                                    batch_size=batch_size, 
                                    disable_paralell=disable_paralell)
-    if verbose == 'detail':
+    if isinstance(verbose, str) and  verbose == 'detail':
         process = tqdm(context_embedding)
     else:
         process = context_embedding
