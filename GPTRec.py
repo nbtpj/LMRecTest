@@ -115,7 +115,7 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
         right_position_in_rank = np.argsort(log_p)
         predictions.append([all_selections[right_position_in_rank]])
         if isinstance(verbose, tqdm) and verbose is not None:
-            verbose.updadte(1)
+            verbose.update(1)
     predictions = np.concatenate(predictions, axis=0)
     return predictions
 
