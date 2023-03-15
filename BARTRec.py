@@ -109,7 +109,8 @@ def rank_with_bart(model: BartForConditionalGeneration, tokenizer: BartTokenizer
                    context_embedding: list = None,
                    term_to_estimate: str = TERM_TO_ESTIMATE,
                    batch_size:int=DEEP_MODEL_BATCH_SIZE,
-                   disable_paralell:bool=False):
+                   disable_paralell:bool=False,
+                   verbose:tqdm=None):
     """
     Return the right ranked index of available_selections w.r.t corresponding context
     i.e:
@@ -142,11 +143,17 @@ def rank_with_bart(model: BartForConditionalGeneration, tokenizer: BartTokenizer
         context_embedding = encode(contexts, model, tokenizer, 
                                    batch_size=batch_size, 
                                    disable_paralell=disable_paralell)
-    for ctx_embedding in tqdm(context_embedding):
+    if verbose == 'detail':
+        process = tqdm(context_embedding)
+    else:
+        process = context_embedding
+    for ctx_embedding in process:
         log_p = predict_log_prob(ctx_embedding, **decoder_embeddings, 
                                  model=model, batch_size=batch_size,
                                  disable_paralell=disable_paralell)
         right_position_in_rank = np.argsort(log_p)
         predictions.append([all_selections[right_position_in_rank]])
+        if isinstance(verbose, tqdm) and verbose is not None:
+            verbose.updadte(1)
     predictions = np.concatenate(predictions, axis=0)
     return predictions

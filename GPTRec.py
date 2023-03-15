@@ -63,7 +63,8 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
                                 contexts:list, available_selections:list,
                                 term_to_estimate: str = TERM_TO_ESTIMATE,
                                 batch_size:int=DEEP_MODEL_BATCH_SIZE,
-                                disable_paralell:bool=False):
+                                disable_paralell:bool=False,
+                                verbose=None,):
     """
     Return the right ranked index of available_selections w.r.t corresponding context
     i.e:
@@ -80,7 +81,8 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
         if is None, the model will estimate the whole selection.
     :return: a numpy array of ranked index in shape of [num_contexts , num_selections]
     """
-    print('tokenizing inputs')
+    if verbose == 'detail':
+        print('tokenizing inputs')
     context_ids = tokenizer(contexts, return_tensors=None, verbose=True)['input_ids']
     selection_ids = tokenizer(available_selections, return_tensors=None, verbose=True)['input_ids']
     labels = selection_ids
@@ -93,10 +95,15 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
     assert max_label_length < tokenizer.model_max_length, "target length is too large!"
     predictions = []
     all_selections = np.arange(len(available_selections))
-    print('prepared inputs')
+    if verbose == 'detail':
+        print('prepared inputs')
     if model_paralell and not disable_paralell:
         model = torch.nn.DataParallel(model)
-    for context in tqdm(context_ids):
+    if verbose == 'detail':
+        process = tqdm(context_ids)
+    else:
+        process = context_ids
+    for context in process:
         truncated_ids = context[:tokenizer.model_max_length - max_label_length - 1]
         context_w_selections_ids = [truncated_ids +  selection for selection in selection_ids]
         label = [[-100,]*len(truncated_ids) +  selection for selection in labels]
@@ -107,6 +114,8 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
                                     batch_size=batch_size)
         right_position_in_rank = np.argsort(log_p)
         predictions.append([all_selections[right_position_in_rank]])
+        if isinstance(verbose, tqdm) and verbose is not None:
+            verbose.updadte(1)
     predictions = np.concatenate(predictions, axis=0)
     return predictions
 
