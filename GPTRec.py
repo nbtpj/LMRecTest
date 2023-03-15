@@ -1,8 +1,8 @@
 import torch
 from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
+from copy import copy
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
-
 from env_config import *
 from metrics import *
 
@@ -21,11 +21,25 @@ def mask_all_except(seq2mask: list, exception: list, mask_by: int = -100):
     return seq2mask
 
 def pad_label(batch, pad_id=-100):
+    batch = copy(batch)
     max_length = max(*[len(each) for each in batch])
     paded = []
     for each in batch:
         paded.append(each + [pad_id,]*(max_length - len(each)))
     return paded
+
+def custom_gpt2_pad(batch:list):
+    batch = copy(batch)
+    max_length = max(*[len(each) for each in batch])
+    paded = []
+    mask = []
+    for each in batch:
+        paded.append(each + [each[-1],]*(max_length - len(each)))
+        mask.append([1,]*len(each) + [0,]*(max_length - len(each)))
+    return {
+       'input_ids': torch.LongTensor(paded),
+       'attention_mask': torch.FloatTensor(mask),
+    }
 
 def predict_a_sample(token_list: list,
                      label:list,
@@ -39,9 +53,10 @@ def predict_a_sample(token_list: list,
         loss_fct = CrossEntropyLoss(reduction='none')
         log_p = []
         for i in range(0, len(token_list), batch_size):
-            batched_inputs = tokenizer.pad({'input_ids': token_list[i:i + batch_size]}, 
-                                           return_attention_mask=True, 
-                                           return_tensors='pt')
+            batched_inputs = custom_gpt2_pad(token_list[i:i + batch_size])
+            # batched_inputs = tokenizer.pad({'input_ids': token_list[i:i + batch_size]}, 
+            #                                return_attention_mask=True, 
+            #                                return_tensors='pt')
             batched_inputs = {k:v.to(device) for k, v in batched_inputs.items()}
             labels = label[i:i + batch_size]
             labels = torch.LongTensor(pad_label(labels)).to(device)
