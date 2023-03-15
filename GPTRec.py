@@ -90,7 +90,7 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
         labels = []
         term_to_estimate = tokenizer(term_to_estimate, add_special_tokens=False)['input_ids']
         for ids in selection_ids:
-            label.append(mask_all_except(ids, term_to_estimate, -100))
+            labels.append(mask_all_except(ids, term_to_estimate, -100))
     max_label_length = max(*[len(s) for s in labels])
     assert max_label_length < tokenizer.model_max_length, "target length is too large!"
     predictions = []
