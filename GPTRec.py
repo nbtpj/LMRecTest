@@ -21,7 +21,6 @@ def mask_all_except(seq2mask: list, exception: list, mask_by: int = -100):
     return seq2mask
 
 def pad_label(batch, pad_id=-100):
-    batch = copy(batch)
     max_length = max(*[len(each) for each in batch])
     paded = []
     for each in batch:
@@ -29,7 +28,6 @@ def pad_label(batch, pad_id=-100):
     return paded
 
 def custom_gpt2_pad(batch:list):
-    batch = copy(batch)
     max_length = max(*[len(each) for each in batch])
     paded = []
     mask = []
@@ -106,7 +104,7 @@ def rank_with_gpt(model:GPT2LMHeadModel, tokenizer:GPT2Tokenizer,
         labels = []
         term_to_estimate = tokenizer(term_to_estimate, add_special_tokens=False)['input_ids']
         for ids in selection_ids:
-            labels.append(mask_all_except(ids, term_to_estimate, -100))
+            labels.append(mask_all_except(copy(ids), term_to_estimate, -100))
     max_label_length = max(*[len(s) for s in labels])
     assert max_label_length < tokenizer.model_max_length, "target length is too large!"
     predictions = []
