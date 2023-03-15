@@ -80,9 +80,9 @@ def predict_log_prob(context, decoder_inputs_embeds,
         if model_paralell and not disable_paralell:
             decoder = torch.nn.DataParallel(decoder)
         for i in range(0, decoder_inputs_embeds.shape[0], batch_size):
-            batched_labels = labels[i:i + batch_size, ...]
-            batched_decoder_inputs_embeds = decoder_inputs_embeds[i:i + batch_size, ...]
-            batched_decoder_attention_mask = decoder_attention_mask[i:i + batch_size, ...]
+            batched_labels = labels[i:i + batch_size, ...].to(device)
+            batched_decoder_inputs_embeds = decoder_inputs_embeds[i:i + batch_size, ...].to(device)
+            batched_decoder_attention_mask = decoder_attention_mask[i:i + batch_size, ...].to(device)
             encoder_last_hidden = context.expand((batched_decoder_inputs_embeds.shape[0], -1, -1)).to(device)
             decoder_output = decoder(
                 attention_mask=batched_decoder_attention_mask,
