@@ -3,8 +3,8 @@ from torch.nn import CrossEntropyLoss
 from tqdm import tqdm
 from transformers import BartTokenizer, BartForConditionalGeneration
 
-from env_config import *
-from metrics import *
+from .env_config import *
+from .metrics import *
 
 
 def mask_all_except(seq2mask: list, exception: list, mask_by: int = -100):
